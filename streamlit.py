@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import io
 import datetime
+pip install -r requirements.txt
 import plotly.express as px
 
 st.set_page_config(
@@ -319,3 +320,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
