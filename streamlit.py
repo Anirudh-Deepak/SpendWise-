@@ -215,6 +215,8 @@ def show_analyze_page():
         with col1:
             st.markdown("### Spending Breakdown by Category")
             pie_data = df_filtered.groupby('Category')['Amount'].sum().reset_index()
+            pie_data = pie_data.sort_values(by='Amount', ascending=True)  # ✅ ascending order
+
             fig_bar = px.bar(
                 pie_data, x='Category', y='Amount', color='Category', 
                 title='Category Spending (Bar Chart)', color_discrete_sequence=px.colors.sequential.RdBu
