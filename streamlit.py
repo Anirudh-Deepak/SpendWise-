@@ -101,24 +101,27 @@ def parse_data(uploaded_file):
         st.error(f"Error processing file. Ensure it has 'Date', 'Amount', and 'Category' columns: {e}")
         return None
 
-def get_date_filters(df):
+def get_date_filters(df, yearly=False):
     unique_years = sorted(df['Year'].unique(), reverse=True)
-    latest_year = unique_years[0]
-    latest_month_num = df[df['Year'] == latest_year]['Month'].max()
-    latest_month_name = df[df['Month'] == latest_month_num]['MonthName'].iloc[0]
     selected_year = st.sidebar.selectbox("Select Year:", unique_years, index=0)
-    months_in_year = df[df['Year'] == selected_year]['MonthName'].unique()
-    try:
-        default_month_index = list(months_in_year).index(latest_month_name)
-    except:
-        default_month_index = 0
-    selected_month_name = st.sidebar.selectbox("Select Month:", months_in_year, index=default_month_index)
-    df_filtered = df[(df['Year'] == selected_year) & (df['MonthName'] == selected_month_name)]
+    if yearly:
+        df_filtered = df[df['Year'] == selected_year]
+        selected_month_name = None
+    else:
+        months_in_year = df[df['Year'] == selected_year]['MonthName'].unique()
+        latest_month_num = df[df['Year'] == selected_year]['Month'].max()
+        latest_month_name = df[df['Month'] == latest_month_num]['MonthName'].iloc[0]
+        try:
+            default_month_index = list(months_in_year).index(latest_month_name)
+        except:
+            default_month_index = 0
+        selected_month_name = st.sidebar.selectbox("Select Month:", months_in_year, index=default_month_index)
+        df_filtered = df[(df['Year'] == selected_year) & (df['MonthName'] == selected_month_name)]
     return df_filtered, selected_year, selected_month_name
 
 def generate_contextual_tip(df_filtered):
     if df_filtered.empty:
-        return "No spending data available for this month to generate a specific tip."
+        return "No spending data available to generate a specific tip."
     category_spending = df_filtered.groupby('Category')['Amount'].sum().sort_values(ascending=False)
     if category_spending.empty:
         return "No categorized spending found. Start by categorizing your transactions!"
@@ -159,13 +162,14 @@ def show_manage_page():
         st.warning("⚠️ Please go to the 'Upload' page to load your bank statement first.")
         return
 
+    view_option = st.sidebar.radio("View Type:", ["Monthly", "Yearly"], index=0)
     df_spent = st.session_state['df_spent']
-    df_filtered, selected_year, selected_month_name = get_date_filters(df_spent)
+    df_filtered, selected_year, selected_month_name = get_date_filters(df_spent, yearly=(view_option=="Yearly"))
 
     total_spent = df_filtered['Amount'].sum()
     suggested_savings = total_spent * 0.2
 
-    st.subheader(f"Monthly Dashboard: {selected_month_name} {selected_year}")
+    st.subheader(f"{view_option} Dashboard: {selected_year}" + (f" - {selected_month_name}" if selected_month_name else ""))
 
     col1, col2 = st.columns(2)
     with col1:
@@ -174,26 +178,16 @@ def show_manage_page():
         st.metric("Savings Goal (20%):", f"${suggested_savings:,.2f}")
 
     st.markdown("---")
-
     st.subheader("💡 Contextual Saving Tip")
-    contextual_tip = generate_contextual_tip(df_filtered)
-    st.info(contextual_tip)
-
+    st.info(generate_contextual_tip(df_filtered))
     st.markdown("---")
     st.subheader("Top Spending Categories")
 
-    top_categories_df = (
-        df_filtered.groupby('Category')['Amount']
-        .sum()
-        .reset_index()
-        .sort_values(by='Amount', ascending=False)
-    )
-
+    top_categories_df = df_filtered.groupby('Category')['Amount'].sum().reset_index().sort_values(by='Amount', ascending=False)
     if not top_categories_df.empty:
         top_categories_df['Percentage'] = (top_categories_df['Amount'] / top_categories_df['Amount'].sum()) * 100
         num_cols = min(3, len(top_categories_df))
         col_list = st.columns(num_cols)
-
         for idx, row in enumerate(top_categories_df.head(num_cols).itertuples(index=False)):
             with col_list[idx]:
                 st.metric(
@@ -209,47 +203,50 @@ def show_analyze_page():
     if st.session_state.get('df_spent') is None or st.session_state['df_spent'].empty:
         st.warning("⚠️ Please go to the 'Upload' page to load your bank statement first.")
         return
+
+    view_option = st.sidebar.radio("View Type:", ["Monthly", "Yearly"], index=0)
     df_spent = st.session_state['df_spent']
-    df_filtered, selected_year, selected_month_name = get_date_filters(df_spent)
-    st.subheader(f"Detailed Analysis: {selected_month_name} {selected_year}")
+    df_filtered, selected_year, selected_month_name = get_date_filters(df_spent, yearly=(view_option=="Yearly"))
+
+    st.subheader(f"Detailed Analysis: {selected_year}" + (f" - {selected_month_name}" if selected_month_name else ""))
+
     col1, col2 = st.columns(2)
     if not df_filtered.empty:
         with col1:
             st.markdown("### Spending Breakdown by Category")
             pie_data = df_filtered.groupby('Category')['Amount'].sum().reset_index()
             fig_bar = px.bar(
-                pie_data, 
-                x='Category', 
-                y='Amount', 
-                title='Category Spending (Bar Chart)',
-                color='Category',
-                color_discrete_sequence=px.colors.sequential.RdBu
+                pie_data, x='Category', y='Amount', color='Category', 
+                title='Category Spending (Bar Chart)', color_discrete_sequence=px.colors.sequential.RdBu
             )
             fig_bar.update_layout(showlegend=False, xaxis_title="", yaxis_title="Amount ($)")
             st.plotly_chart(fig_bar, use_container_width=True)
+
         with col2:
             st.markdown("### Weekly Spending Trend")
-            weekly_data = df_filtered.groupby('WeekOfMonth')['Amount'].sum().reset_index()
-            weekly_data['Week'] = 'Week ' + weekly_data['WeekOfMonth'].astype(str)
+            if view_option=="Monthly":
+                weekly_data = df_filtered.groupby('WeekOfMonth')['Amount'].sum().reset_index()
+                weekly_data['Week'] = 'Week ' + weekly_data['WeekOfMonth'].astype(str)
+                x_col = 'Week'
+            else:
+                weekly_data = df_filtered.groupby(df_filtered['Date'].dt.month)['Amount'].sum().reset_index()
+                weekly_data['Month'] = weekly_data['Date'].apply(lambda x: datetime.date(1900, x, 1).strftime('%B'))
+                x_col = 'Month'
             fig_line = px.line(
-                weekly_data, 
-                x='Week', 
-                y='Amount', 
-                title='Total Spent per Week',
-                markers=True,
-                line_shape='linear',
-                color_discrete_sequence=['#5cb85c']
+                weekly_data, x=x_col, y='Amount', markers=True,
+                line_shape='linear', color_discrete_sequence=['#5cb85c'],
+                title='Spending Trend'
             )
             fig_line.update_layout(yaxis_title="Amount ($)", xaxis_title="")
             st.plotly_chart(fig_line, use_container_width=True)
+
     else:
         st.info("No spending data for this period to generate charts.")
+
     st.markdown("---")
     st.markdown("### Raw Transaction Data")
     if not df_filtered.empty:
-        st.dataframe(df_filtered[['Date', 'Category', 'Amount']].sort_values(by='Date'), 
-                     use_container_width=True, 
-                     hide_index=True)
+        st.dataframe(df_filtered[['Date', 'Category', 'Amount']].sort_values(by='Date'), use_container_width=True, hide_index=True)
     else:
         st.info("No transactions found for the selected period.")
 
