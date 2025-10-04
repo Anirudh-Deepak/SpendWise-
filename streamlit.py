@@ -142,6 +142,20 @@ def generate_contextual_tip(df_filtered):
         tip += tips_mapping.get(top_cat, generic_tip)
     return tip
 
+def predict_next_month_spending(df_filtered, salary):
+    if df_filtered.empty:
+        return 0, 0
+    # Average monthly spending
+    monthly_spending = df_filtered.groupby(['Year','Month'])['Amount'].sum().reset_index()
+    predicted_spending = monthly_spending['Amount'].mean()
+    predicted_savings = salary - predicted_spending
+    return predicted_spending, predicted_savings
+
+def category_forecast(df_filtered, predicted_spending):
+    cat_percent = df_filtered.groupby('Category')['Amount'].sum() / df_filtered['Amount'].sum()
+    forecast = (cat_percent * predicted_spending).reset_index().rename(columns={'Amount':'Predicted_Amount'})
+    return forecast
+
 def show_upload_page():
     st.markdown("<div class='main-header'><h1>SpendWise</h1></div>", unsafe_allow_html=True)
     st.subheader("Upload Your Bank Statement")
@@ -166,6 +180,8 @@ def show_manage_page():
     df_spent = st.session_state['df_spent']
     df_filtered, selected_year, selected_month_name = get_date_filters(df_spent, yearly=(view_option=="Yearly"))
 
+    salary = st.sidebar.number_input("Enter your monthly salary ($):", min_value=0.0, value=5000.0, step=100.0)
+
     total_spent = df_filtered['Amount'].sum()
     suggested_savings = total_spent * 0.2
 
@@ -176,6 +192,15 @@ def show_manage_page():
         st.metric("Total Spending:", f"${total_spent:,.2f}")
     with col2:
         st.metric("Savings Goal (20%):", f"${suggested_savings:,.2f}")
+
+    predicted_spending, predicted_savings = predict_next_month_spending(df_filtered, salary)
+    col3, col4 = st.columns(2)
+    with col3:
+        st.metric("Predicted Next Month Spending:", f"${predicted_spending:,.2f}")
+    with col4:
+        st.metric("Predicted Next Month Savings:", f"${predicted_savings:,.2f}")
+        if predicted_savings < 0.2 * salary:
+            st.warning("⚠️ Predicted savings are below the recommended 20% of your salary!")
 
     st.markdown("---")
     st.subheader("💡 Contextual Saving Tip")
@@ -195,8 +220,10 @@ def show_manage_page():
                     value=f"${row.Amount:,.2f}",
                     delta=f"{row.Percentage:.1f}% of total"
                 )
-    else:
-        st.info("No spending data found for analysis.")
+
+    forecast_df = category_forecast(df_filtered, predicted_spending)
+    st.subheader("Predicted Spending by Category")
+    st.dataframe(forecast_df, use_container_width=True)
 
 def show_analyze_page():
     st.markdown("<div class='main-header'><h1>SpendWise</h1></div>", unsafe_allow_html=True)
@@ -215,10 +242,9 @@ def show_analyze_page():
         with col1:
             st.markdown("### Spending Breakdown by Category")
             pie_data = df_filtered.groupby('Category')['Amount'].sum().reset_index()
-            pie_data = pie_data.sort_values(by='Amount', ascending=True)  # ✅ ascending order
-
             fig_bar = px.bar(
-                pie_data, x='Category', y='Amount', color='Category', 
+                pie_data.sort_values(by='Amount', ascending=True), # ascending order
+                x='Category', y='Amount', color='Category', 
                 title='Category Spending (Bar Chart)', color_discrete_sequence=px.colors.sequential.RdBu
             )
             fig_bar.update_layout(showlegend=False, xaxis_title="", yaxis_title="Amount ($)")
@@ -241,9 +267,6 @@ def show_analyze_page():
             )
             fig_line.update_layout(yaxis_title="Amount ($)", xaxis_title="")
             st.plotly_chart(fig_line, use_container_width=True)
-
-    else:
-        st.info("No spending data for this period to generate charts.")
 
     st.markdown("---")
     st.markdown("### Raw Transaction Data")
