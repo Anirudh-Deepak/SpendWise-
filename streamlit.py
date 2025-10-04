@@ -1,10 +1,9 @@
 import streamlit as st
 import pandas as pd
 import io
-import datetime
-import plotly.express as px
 import numpy as np
 from sklearn.linear_model import LinearRegression
+import plotly.express as px
 
 st.set_page_config(
     page_title="SpendWise - Financial Manager",
@@ -119,7 +118,7 @@ def show_upload_page():
 
     # Salary input
     st.subheader("💰 Enter Your Monthly Salary")
-    salary = st.number_input("Monthly Salary ($):", min_value=0.0, value=0.0, step=100.0)
+    salary = st.number_input("Monthly Salary ($):", min_value=0.0, value=5000.0, step=100.0)
     st.session_state['salary'] = salary
 
 def show_manage_page():
@@ -152,10 +151,15 @@ def show_manage_page():
     top_categories_df = df_filtered.groupby('Category')['Amount'].sum().reset_index().sort_values(by='Amount', ascending=False)
     if not top_categories_df.empty:
         top_categories_df['Percentage'] = (top_categories_df['Amount'] / top_categories_df['Amount'].sum()) * 100
-        col_list = st.columns(min(3, len(top_categories_df)))
-        for i, row in top_categories_df.head(3).iterrows():
+        num_cols = min(3, len(top_categories_df))
+        col_list = st.columns(num_cols)
+        for i, row in top_categories_df.head(num_cols).iterrows():
             with col_list[i]:
                 st.metric(row['Category'], f"${row['Amount']:,.2f}", f"{row['Percentage']:.1f}% of total")
+        # --- Bar chart ---
+        st.markdown("### Spending by Category")
+        fig_bar = px.bar(top_categories_df, x='Category', y='Amount', text='Amount', color='Category', color_discrete_sequence=px.colors.qualitative.Pastel)
+        st.plotly_chart(fig_bar, use_container_width=True)
     else:
         st.info("No spending data found.")
 
@@ -176,11 +180,9 @@ def show_analyze_page():
     if not df_filtered.empty:
         with col1:
             st.markdown("### Spending Breakdown by Category")
-            pie_data = df_filtered.groupby('Category')['Amount'].sum().reset_index()
-            fig_pie = px.pie(pie_data, values='Amount', names='Category', title='Spending Distribution', hole=.3, color_discrete_sequence=px.colors.sequential.RdBu)
-            fig_pie.update_traces(textposition='inside', textinfo='percent+label', marker=dict(line=dict(color='#000000', width=1)))
-            fig_pie.update_layout(showlegend=False)
-            st.plotly_chart(fig_pie, use_container_width=True)
+            cat_data = df_filtered.groupby('Category')['Amount'].sum().reset_index()
+            fig_bar = px.bar(cat_data, x='Category', y='Amount', text='Amount', color='Category', color_discrete_sequence=px.colors.qualitative.Pastel)
+            st.plotly_chart(fig_bar, use_container_width=True)
 
         with col2:
             st.markdown("### Weekly/Monthly Spending Trend")
@@ -195,8 +197,6 @@ def show_analyze_page():
                 fig_line = px.line(monthly_data, x='MonthName', y='Amount', title='Total Spent per Month', markers=True, color_discrete_sequence=['#5cb85c'])
             fig_line.update_layout(yaxis_title="Amount ($)", xaxis_title="")
             st.plotly_chart(fig_line, use_container_width=True)
-    else:
-        st.info("No spending data for this period.")
 
     st.markdown("---")
     st.markdown("### Raw Transaction Data")
@@ -207,7 +207,6 @@ def show_analyze_page():
 
 def show_predict_page():
     st.markdown("<div class='main-header'><h1>SpendWise - Forecast</h1></div>", unsafe_allow_html=True)
-    
     if st.session_state.get('df_spent') is None or st.session_state['df_spent'].empty:
         st.warning("Please upload your bank statement first.")
         return
@@ -215,50 +214,35 @@ def show_predict_page():
     df_spent = st.session_state['df_spent']
     salary = st.session_state.get('salary', 0)
 
-    st.subheader("💹 Forecasting Expenses and Savings (Linear Regression)")
+    st.subheader("Predicted Spending & Savings")
+    df_spent_sorted = df_spent.sort_values('Date')
+    df_spent_sorted['MonthNum'] = df_spent_sorted['Date'].dt.year*12 + df_spent_sorted['Date'].dt.month
 
-    # --- Prepare data ---
-    df_monthly = df_spent.groupby(['Year', 'Month'])['Amount'].sum().reset_index()
-    df_monthly['MonthNum'] = (df_monthly['Year'] - df_monthly['Year'].min()) * 12 + df_monthly['Month']
-
-    X = df_monthly[['MonthNum']].values
-    y = df_monthly['Amount'].values
+    X = df_spent_sorted['MonthNum'].values.reshape(-1,1)
+    y = df_spent_sorted['Amount'].values
 
     if len(X) < 2:
-        st.warning("Not enough data for linear regression forecast. Need at least 2 months of data.")
+        st.info("Not enough data for prediction.")
         return
 
-    # --- Fit Linear Regression ---
     model = LinearRegression()
     model.fit(X, y)
 
-    # --- Predict next 12 months ---
-    last_month_num = df_monthly['MonthNum'].max()
-    future_months = np.arange(last_month_num + 1, last_month_num + 13).reshape(-1, 1)
-    predicted_spending = model.predict(future_months)
+    next_month = df_spent_sorted['MonthNum'].max() + 1
+    next_12_months = np.array([next_month + i for i in range(12)]).reshape(-1,1)
+    predicted_spending = model.predict(next_12_months)
+    predicted_savings = salary - predicted_spending
 
-    # --- Prepare results ---
-    predicted_monthly = pd.DataFrame({
-        'MonthNum': future_months.flatten(),
-        'PredictedSpending': predicted_spending
+    forecast_df = pd.DataFrame({
+        'Month': [f'Month {i+1}' for i in range(12)],
+        'Predicted Spending': predicted_spending,
+        'Predicted Savings': predicted_savings
     })
-    predicted_yearly = predicted_monthly['PredictedSpending'].sum()
-    predicted_monthly_savings = [max(salary - x, 0) if salary > 0 else x*0.2 for x in predicted_spending]
-    predicted_yearly_savings = sum(predicted_monthly_savings)
 
-    # --- Display ---
-    st.subheader("Predicted Monthly Spending & Savings (Next 12 Months)")
-    for i, amt in enumerate(predicted_spending):
-        st.write(f"Month {i+1}: Spending: ${amt:,.2f}, Savings: ${predicted_monthly_savings[i]:,.2f}")
-
-    st.markdown("---")
-    st.metric("Predicted Yearly Spending", f"${predicted_yearly:,.2f}")
-    st.metric("Predicted Yearly Savings", f"${predicted_yearly_savings:,.2f}")
-
-    # --- Plot ---
-    st.subheader("📈 Predicted Spending Trend")
-    fig = px.line(predicted_monthly, x='MonthNum', y='PredictedSpending', title="Next 12 Months Predicted Spending", markers=True)
-    st.plotly_chart(fig, use_container_width=True)
+    fig_forecast = px.bar(forecast_df, x='Month', y=['Predicted Spending', 'Predicted Savings'],
+                          barmode='group', text_auto='.2s', color_discrete_sequence=['#c9302c', '#5cb85c'])
+    st.plotly_chart(fig_forecast, use_container_width=True)
+    st.dataframe(forecast_df)
 
 # --- Main ---
 def main():
@@ -266,7 +250,7 @@ def main():
     if 'df_spent' not in st.session_state:
         st.session_state['df_spent'] = None
     if 'salary' not in st.session_state:
-        st.session_state['salary'] = 0
+        st.session_state['salary'] = 5000.0
 
     page = st.sidebar.radio("Go to:", ("Upload", "Manage", "Analyze", "Predict"))
 
