@@ -158,33 +158,48 @@ def show_manage_page():
     if st.session_state.get('df_spent') is None or st.session_state['df_spent'].empty:
         st.warning("⚠️ Please go to the 'Upload' page to load your bank statement first.")
         return
+
     df_spent = st.session_state['df_spent']
     df_filtered, selected_year, selected_month_name = get_date_filters(df_spent)
+
     total_spent = df_filtered['Amount'].sum()
     suggested_savings = total_spent * 0.2
+
     st.subheader(f"Monthly Dashboard: {selected_month_name} {selected_year}")
+
     col1, col2 = st.columns(2)
     with col1:
         st.metric("Total Spending:", f"${total_spent:,.2f}")
     with col2:
         st.metric("Savings Goal (20%):", f"${suggested_savings:,.2f}")
+
     st.markdown("---")
+
     st.subheader("💡 Contextual Saving Tip")
     contextual_tip = generate_contextual_tip(df_filtered)
     st.info(contextual_tip)
+
     st.markdown("---")
     st.subheader("Top Spending Categories")
-    top_categories_df = df_filtered.groupby('Category')['Amount'].sum().reset_index().sort_values(by='Amount', ascending=False)
+
+    top_categories_df = (
+        df_filtered.groupby('Category')['Amount']
+        .sum()
+        .reset_index()
+        .sort_values(by='Amount', ascending=False)
+    )
+
     if not top_categories_df.empty:
         top_categories_df['Percentage'] = (top_categories_df['Amount'] / top_categories_df['Amount'].sum()) * 100
         num_cols = min(3, len(top_categories_df))
         col_list = st.columns(num_cols)
-        for i, row in top_categories_df.head(num_cols).iterrows():
-            with col_list[i]:
+
+        for idx, row in enumerate(top_categories_df.head(num_cols).itertuples(index=False)):
+            with col_list[idx]:
                 st.metric(
-                    label=row['Category'],
-                    value=f"${row['Amount']:,.2f}",
-                    delta=f"{row['Percentage']:.1f}% of total"
+                    label=row.Category,
+                    value=f"${row.Amount:,.2f}",
+                    delta=f"{row.Percentage:.1f}% of total"
                 )
     else:
         st.info("No spending data found for analysis.")
@@ -252,4 +267,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
