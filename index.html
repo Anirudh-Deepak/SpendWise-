@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpendWise</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+<header>
+    <button id="homeBtn">Home</button>
+    SpendWise
+</header>
+
+<main>
+    <div class="upload-container">
+        <h2>Upload Your Bank Statement</h2>
+        <input type="file" id="fileInput" accept=".pdf" />
+        <br>
+        <button id="uploadBtn" disabled>Upload</button>
+    </div>
+</main>
+
+<script src="index.js"></script>
+<script>
+    // Home button redirect
+    document.getElementById('homeBtn').addEventListener('click', () => {
+        window.location.href = 'index.html';
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SpendWise - Analysis</title>
+  <link rel="stylesheet" href="analysis.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <button id="homeBtn">Home</button>
+    SpendWise
+  </header>
+
+  <!-- Main Content -->
+  <div class="container">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <button class="side-btn" id="manageBtn">Manage</button>
+      <button class="side-btn" id="analyzeBtn">Analyze</button>
+
+      <!-- NEW: Select Period -->
+      <div class="period-select">
+        <label for="yearSelect">Year:</label>
+        <select id="yearSelect">
+          <option>2025</option>
+          <option>2024</option>
+          <option>2023</option>
+        </select>
+
+        <label for="monthSelect">Month:</label>
+        <select id="monthSelect">
+          <option>January</option>
+          <option>February</option>
+          <option>March</option>
+          <option>April</option>
+          <option>May</option>
+          <option>June</option>
+          <option>July</option>
+          <option>August</option>
+          <option>September</option>
+          <option>October</option>
+          <option>November</option>
+          <option>December</option>
+        </select>
+      </div>
+    </aside>
+
+    <!-- Main area -->
+    <main class="main-area">
+      <div class="card"> 
+        <h3>Split Up</h3>
+        <div id="pieChart">[Pie chart will go here]</div>
+      </div>
+      <div class="card"> 
+        <h3>Weekly Graph</h3>
+        <div id="weeklyGraph">[Bar chart will go here]</div>
+      </div>
+      <div class="card"> 
+        <h3>Bank Statement</h3>
+        <div class="table-container">
+          <table id="statementTable"></table>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <script src="analysis.js"></script>
+</body>
+</html>

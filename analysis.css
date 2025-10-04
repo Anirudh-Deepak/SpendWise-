@@ -1,0 +1,134 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #f5f0f0;
+}
+
+/* Header */
+header {
+  background-color: #d9534f;
+  color: white;
+  text-align: center;
+  padding: 30px 0;
+  font-size: 32px;
+  font-weight: bold;
+  position: relative;
+}
+
+/* Home Button */
+#homeBtn {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 8px 15px;
+  font-size: 0.8em;
+  border: none;
+  border-radius: 5px;
+  background-color: white;
+  color: #d9534f;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+#homeBtn:hover {
+  background-color: #f5f0f0;
+}
+
+/* Container Layout */
+.container {
+  display: flex;
+  min-height: calc(100vh - 100px);
+  padding: 20px;
+  gap: 20px;
+  box-sizing: border-box;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.side-btn {
+  background-color: #d9534f;
+  color: white;
+  border: none;
+  padding: 12px;
+  font-size: 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+.side-btn:hover {
+  background-color: #c9302c;
+}
+
+/* NEW: Period Select */
+/* Period Select */
+.period-select {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+.period-select label {
+    font-weight: bold;
+    margin-bottom: 3px;
+}
+.period-select select {
+    padding: 6px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+/* Main Area */
+.main-area {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+/* Cards */
+.card {
+  flex: 1;
+  background-color: white;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.card h3 {
+  font-size: 22px;
+  color: #d9534f;
+  margin-bottom: 10px;
+}
+
+/* Table Styling */
+.table-container {
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: auto;
+  border: 1px solid #ccc;
+}
+#statementTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+#statementTable th,
+#statementTable td {
+  padding: 8px;
+  border: 1px solid #ddd;
+  text-align: left;
+  white-space: nowrap; /* prevents squish */
+}

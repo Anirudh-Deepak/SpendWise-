@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpendWise - Monthly Usage</title>
+    <link rel="stylesheet" href="manager.css">
+</head>
+<body>
+    <header>
+        SpendWise
+        <button id="homeBtn">Home</button>
+    </header>
+
+    <div class="container">
+        <aside class="sidebar">
+            <button class="side-btn" id="manageBtn">Manage</button>
+            <button class="side-btn" id="analyzeBtn">Analyze</button>
+
+            <div class="period-select">
+                <label for="yearSelect">Year:</label>
+                <select id="yearSelect">
+                    </select>
+
+                <label for="monthSelect">Month:</label>
+                <select id="monthSelect">
+                    </select>
+            </div>
+        </aside>
+
+        <main class="main-area">
+            <h2>Monthly Summary (Loading...)</h2>
+            <div class="summary-cards">
+                <div class="card">
+                    <p>Total Spent This Month:</p>
+                    <h3 id="totalSpent">$0</h3>
+                </div>
+
+                <div class="card">
+                    <p>Suggested Savings (20%):</p>
+                    <h3 id="suggestedSavings">$0</h3>
+                </div>
+            </div>
+            
+            <div id="tipBox" class="card"> 
+                <h3>💡 Saving Tip:</h3><p>Loading...</p>
+            </div>
+        </main>
+    </div>
+
+    <script src="manager.js"></script>
+    <script>
+        // Home button redirect
+        document.getElementById('homeBtn').addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
+        // Analyze button redirect
+        document.getElementById("analyzeBtn").addEventListener("click", () => {
+            window.location.href = "analysis.html";
+        });
+        // Manage button does not redirect as we are on manager.html
+    </script>
+</body>
+</html>
