@@ -69,7 +69,7 @@ def get_date_filters(df, view_type="Monthly"):
 
         selected_year = st.sidebar.selectbox("Select Year:", unique_years, index=0)
         months_in_year = df[df['Year'] == selected_year]['MonthName'].unique()
-        default_month_index = list(months_in_year).index(latest_month_name) if latest_month_name in months_in_year else 0
+        default_month_index = list(months_in_year).tolist().index(latest_month_name) if latest_month_name in months_in_year else 0
         selected_month_name = st.sidebar.selectbox("Select Month:", months_in_year, index=default_month_index)
         
         df_filtered = df[(df['Year'] == selected_year) & (df['MonthName'] == selected_month_name)]
@@ -116,7 +116,6 @@ def show_upload_page():
         else:
             st.warning("No relevant spending data found.")
 
-    # Salary input
     st.subheader("💰 Enter Your Monthly Salary")
     salary = st.number_input("Monthly Salary ($):", min_value=0.0, value=5000.0, step=100.0)
     st.session_state['salary'] = salary
@@ -156,7 +155,7 @@ def show_manage_page():
         for i, row in top_categories_df.head(num_cols).iterrows():
             with col_list[i]:
                 st.metric(row['Category'], f"${row['Amount']:,.2f}", f"{row['Percentage']:.1f}% of total")
-        # --- Bar chart ---
+
         st.markdown("### Spending by Category")
         fig_bar = px.bar(top_categories_df, x='Category', y='Amount', text='Amount', color='Category', color_discrete_sequence=px.colors.qualitative.Pastel)
         st.plotly_chart(fig_bar, use_container_width=True)
@@ -179,18 +178,18 @@ def show_analyze_page():
     col1, col2 = st.columns(2)
     if not df_filtered.empty:
         with col1:
-            st.markdown("### Spending Breakdown by Category")
+            st.markdown("### Spending by Category")
             cat_data = df_filtered.groupby('Category')['Amount'].sum().reset_index()
             fig_bar = px.bar(cat_data, x='Category', y='Amount', text='Amount', color='Category', color_discrete_sequence=px.colors.qualitative.Pastel)
             st.plotly_chart(fig_bar, use_container_width=True)
 
         with col2:
-            st.markdown("### Weekly/Monthly Spending Trend")
+            st.markdown("### Spending Trend")
             if view_type == "Monthly":
                 weekly_data = df_filtered.groupby('WeekOfMonth')['Amount'].sum().reset_index()
                 weekly_data['Week'] = 'Week ' + weekly_data['WeekOfMonth'].astype(str)
                 fig_line = px.line(weekly_data, x='Week', y='Amount', title='Total Spent per Week', markers=True, color_discrete_sequence=['#5cb85c'])
-            else:  # Yearly
+            else:
                 monthly_data = df_filtered.groupby('MonthName')['Amount'].sum().reset_index()
                 month_order = pd.to_datetime(monthly_data['MonthName'], format='%B').dt.month
                 monthly_data = monthly_data.iloc[month_order.argsort()]
@@ -215,11 +214,10 @@ def show_predict_page():
     salary = st.session_state.get('salary', 0)
 
     st.subheader("Predicted Spending & Savings")
-    df_spent_sorted = df_spent.sort_values('Date')
-    df_spent_sorted['MonthNum'] = df_spent_sorted['Date'].dt.year*12 + df_spent_sorted['Date'].dt.month
-
-    X = df_spent_sorted['MonthNum'].values.reshape(-1,1)
-    y = df_spent_sorted['Amount'].values
+    df_sorted = df_spent.sort_values('Date')
+    df_sorted['MonthNum'] = df_sorted['Date'].dt.year*12 + df_sorted['Date'].dt.month
+    X = df_sorted['MonthNum'].values.reshape(-1,1)
+    y = df_sorted['Amount'].values
 
     if len(X) < 2:
         st.info("Not enough data for prediction.")
@@ -228,7 +226,7 @@ def show_predict_page():
     model = LinearRegression()
     model.fit(X, y)
 
-    next_month = df_spent_sorted['MonthNum'].max() + 1
+    next_month = df_sorted['MonthNum'].max() + 1
     next_12_months = np.array([next_month + i for i in range(12)]).reshape(-1,1)
     predicted_spending = model.predict(next_12_months)
     predicted_savings = salary - predicted_spending
